@@ -21,8 +21,6 @@ class PaymentCreatedHandler(EventHandler):
     
     def handle(self, event_data: Dict[str, Any]) -> None:
         """Execute every time the event is published"""
-        # TODO: Consultez le diagramme de machine à états pour savoir quelle opération effectuer dans cette méthode. Mettez votre commande à jour avec le nouveau payment_id.
-        # N'oubliez pas d'enregistrer le payment_link dans votre commande
         order_id = event_data.get('order_id')
         payment_id = event_data.get('payment_id')
 
