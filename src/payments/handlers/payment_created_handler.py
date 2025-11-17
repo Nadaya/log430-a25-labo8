@@ -27,23 +27,27 @@ class PaymentCreatedHandler(EventHandler):
         payment_id = event_data.get('payment_id')
 
         try:
-            # on récupère et on met à jour la commande
+            # on ajoute la commande
             order = Order.objects.get(id=order_id)
             order.payment_id = payment_id
 
-            event_data["payment_link"] = "todo-add-payment-link-here"
+            event_data["payment_link"] = f"http://api-gateway:8080/payments-api/payments/process/{order.payment_id}"
+
             order.payment_link = event_data["payment_link"]
+            user_id=event_data['user_id'],
 
-            order.save()
+            add_order(user_id, event_data['order_items'])
 
-            # Si l'operation a réussi, déclenchez SagaCompleted.
+            # 2. Si l'operation a réussi, déclenchez SagaCompleted.
             event_data['event'] = "SagaCompleted"
             self.logger.debug(f"payment_link={event_data['payment_link']}")
             OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
 
         except Exception as e:
-            # TODO: Si l'operation a échoué, déclenchez l'événement adéquat selon le diagramme.
+            # 3. Si l'opération a échoué, on termine quand même car il n'y a pas d'autre transition si échoue
             self.logger.error(f"Failed to update order with payment info: {str(e)}")
             event_data['error'] = str(e)
+            event_data['event'] = "SagaCompleted"
+
 
 

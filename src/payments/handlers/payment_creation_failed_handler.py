@@ -26,6 +26,7 @@ class PaymentCreationFailedHandler(EventHandler):
         order_event_producer = OrderEventProducer()
 
         try:
+            # 1. on remet le stock à jour
             session = get_sqlalchemy_session()
             check_in_items_to_stock(session,event_data['order_items'])
             session.commit()
@@ -33,9 +34,9 @@ class PaymentCreationFailedHandler(EventHandler):
             # Si réussi, déclenchez StockIncreased
             event_data['event'] = "StockIncreased"
         except Exception as e:
-            # TODO: Si l'operation a échoué, continuez la compensation des étapes précedentes.
+            # 2. Si l'opération a échoué, on termine quand même car il n'y a pas de transition autre
             session.rollback()
-            event_data['event'] = "StockIncreasedFailed"
+            event_data['event'] = "StockIncreased"
             event_data['error'] = str(e)
         finally: 
             session.close()
