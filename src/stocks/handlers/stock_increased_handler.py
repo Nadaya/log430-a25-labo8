@@ -22,15 +22,28 @@ class StockIncreasedHandler(EventHandler):
     
     def handle(self, event_data: Dict[str, Any]) -> None:
         """Execute every time the event is published"""
-        # TODO: Consultez le diagramme de machine à états pour savoir quelle opération effectuer dans cette méthode. 
-
         try:
-            # Si l'operation a réussi, déclenchez OrderCancelled.
+            # 1. Restaurer le stock (compensation)
+            self.logger.debug(f"Restoring stock")
+
+            session = get_sqlalchemy_session()
+            check_in_items_to_stock(session, event_data['order_items'])
+            session.commit()
+
+            # 2. Si l'operation a réussi, déclenchez OrderCancelled.
             event_data['event'] = "OrderCancelled"
-            OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
         except Exception as e:
-            # TODO: Si l'operation a échoué, continuez la compensation des étapes précedentes.
+            # 3. Si l'opération a échoué, on termine quand même la compensation
+            self.logger.error(f"StockIncrease compensation failed: {str(e)}")
+            event_data['event'] = "OrderCancelled"
             event_data['error'] = str(e)
+            OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
+
+        finally : 
+            session.close()
+            OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
+
+
 
 
 

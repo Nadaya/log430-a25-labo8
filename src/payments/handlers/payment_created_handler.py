@@ -23,9 +23,19 @@ class PaymentCreatedHandler(EventHandler):
         """Execute every time the event is published"""
         # TODO: Consultez le diagramme de machine à états pour savoir quelle opération effectuer dans cette méthode. Mettez votre commande à jour avec le nouveau payment_id.
         # N'oubliez pas d'enregistrer le payment_link dans votre commande
-        event_data["payment_link"] = "todo-add-payment-link-here"
+        order_id = event_data.get('order_id')
+        payment_id = event_data.get('payment_id')
 
         try:
+            # on récupère et on met à jour la commande
+            order = Order.objects.get(id=order_id)
+            order.payment_id = payment_id
+
+            event_data["payment_link"] = "todo-add-payment-link-here"
+            order.payment_link = event_data["payment_link"]
+
+            order.save()
+
             # Si l'operation a réussi, déclenchez SagaCompleted.
             event_data['event'] = "SagaCompleted"
             self.logger.debug(f"payment_link={event_data['payment_link']}")
@@ -33,6 +43,7 @@ class PaymentCreatedHandler(EventHandler):
 
         except Exception as e:
             # TODO: Si l'operation a échoué, déclenchez l'événement adéquat selon le diagramme.
+            self.logger.error(f"Failed to update order with payment info: {str(e)}")
             event_data['error'] = str(e)
 
 

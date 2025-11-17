@@ -23,13 +23,21 @@ class PaymentCreationFailedHandler(EventHandler):
     
     def handle(self, event_data: Dict[str, Any]) -> None:
         """Execute every time the event is published"""
-        # TODO: Consultez le diagramme de machine à états pour savoir quelle opération effectuer dans cette méthode. 
-        # Conseil : inspirez-vous de OrderCreatedHandler ;)
+        order_event_producer = OrderEventProducer()
 
         try:
+            session = get_sqlalchemy_session()
+            check_in_items_to_stock(session,event_data['order_items'])
+            session.commit()
+
             # Si réussi, déclenchez StockIncreased
             event_data['event'] = "StockIncreased"
-            OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
         except Exception as e:
             # TODO: Si l'operation a échoué, continuez la compensation des étapes précedentes.
+            session.rollback()
+            event_data['event'] = "StockIncreasedFailed"
             event_data['error'] = str(e)
+        finally: 
+            session.close()
+            order_event_producer.get_instance().send(config.KAFKA_TOPIC, value=event_data)
+

@@ -22,13 +22,15 @@ class StockDecreaseFailedHandler(EventHandler):
     
     def handle(self, event_data: Dict[str, Any]) -> None:
         """Execute every time the event is published"""
-        # TODO: Consultez le diagramme de machine à états pour savoir quelle opération effectuer dans cette méthode. 
-
+        order_id = event_data.get("order_id")
         try:
+            # 1. on supprime la commande
+            remove_order(order_id)
             # Si l'operation a réussi, déclenchez OrderCancelled.
             event_data['event'] = "OrderCancelled"
             OrderEventProducer().get_instance().send(config.KAFKA_TOPIC, value=event_data)
         except Exception as e:
-            # TODO: Si l'operation a échoué, continuez la compensation des étapes précedentes.
+            # 2. Si l'opération a échoué, on termine quand même car il n'y a pas d'autre transition
+            event_data['event'] = "OrderCancelled"
             event_data['error'] = str(e)
   

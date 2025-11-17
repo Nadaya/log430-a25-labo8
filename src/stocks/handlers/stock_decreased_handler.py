@@ -42,5 +42,8 @@ class StockDecreasedHandler(EventHandler):
         except Exception as e:
             # TODO: Si la transaction de paiement n'était pas crée, déclenchez l'événement adéquat selon le diagramme.
             event_data['error'] = str(e)
+            event_data['event'] = "StockDecreaseFailed"
+
+
 
 
